@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'oxide'
+
+# Parse options
+options = {}
+opt_parser = OptionParser.new do |opt|
+  opt.banner = "Usage: oxide-gcc [options] file"
+
+  opt.on('--help', "Display this information") do |v|
+    options[:help] = v
+  end
+end
+opt_parser.parse!
+
+# Check for conditions to stop executing the script
+if options[:help] or ARGV.empty?
+  puts opt_parser
+  exit
+end
+
+# Read and parse given file
+dirname = File.dirname(ARGV[0]) + "/" if File.dirname(ARGV[0])
+basename = File.basename(ARGV[0], '.rb')
+source = File.open(ARGV[0], "r").read
+
+c_filename = "#{dirname}#{basename}.c"
+File.open(c_filename, 'w') do |f|
+  f.write(Oxide.parse(source))
+end
+
+# Compile the parsed file with gcc
+print `gcc #{c_filename} -o #{dirname + basename}`
