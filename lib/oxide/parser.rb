@@ -30,6 +30,7 @@ module Oxide
       @line = 1
       @indent   = ''
       @unique   = 0
+      @debug = true
 
       top @grammer.parse(source, '(file)')
     end
@@ -96,6 +97,7 @@ module Oxide
 
       @line = sexp.line
 
+      puts "#{meth}(#{sexp.inspect}, #{level.inspect})" if @debug
       __send__ meth, sexp, level
     end
 
@@ -116,6 +118,30 @@ module Oxide
       end
     end
 
+    def main_method(sexp)
+      return main_method(s(:nil)) unless sexp
+
+      case sexp.first
+      when :scope
+        sexp[1] = main_method(sexp[1])
+        sexp
+      when :block
+        if sexp.length > 1
+          sexp[-1] = main_method(sexp[-1])
+        else
+          sexp << main_method(s(:nil))
+        end
+        sexp
+      when :defn
+        s(:block, sexp, s(:defn, :main, s(:args), s(:scope, s(:block, s(:nil))))).tap { |s|
+          s.line = sexp.line
+        }
+      else
+        s(:defn, :main, s(:args), s(:scope, s(:block, sexp))).tap { |s|
+          s.line = sexp.line
+        }
+      end
+    end
 
     def returns(sexp)
       return returns s(:nil) unless sexp
@@ -218,10 +244,11 @@ module Oxide
     #################
 
     def process_scope(sexp, level)
-      puts "process_scope(#{sexp.inspect}, #{level.inspect})"
       stmt = sexp.shift
       if stmt
-        stmt = returns stmt unless @scope.class_scope?
+        # INFO: Don't create returns for now. This needs a refactoring
+        # stmt = returns stmt unless @scope.class_scope?
+        stmt = main_method(stmt) if @scope.top?
         code = process stmt, :stmt
       else
         code = "nil"
@@ -414,7 +441,6 @@ module Oxide
 
     # s(:defn, mid, s(:args), s(:scope))
     def process_defn(sexp, level)
-      puts "process_defn(#{sexp.inspect}, #{level.inspect})"
       mid = sexp[0]
       args = sexp[1]
       stmts = sexp[2]
@@ -431,7 +457,6 @@ module Oxide
     end
 
     def cpp_def(recvr, mid, args, stmts, line, end_line)
-      puts "cpp_def(#{recvr.inspect}, #{mid.inspect}, #{args.inspect}, #{stmts.inspect}, #{line.inspect}, #{end_line.inspect})"
       jsid = mid_to_jsid mid.to_s
 
       if recvr
@@ -589,7 +614,6 @@ module Oxide
     end
 
     def process_block(sexp, level)
-      puts "process_block(#{sexp.inspect}, #{level.inspect})"
       result = []
       sexp << s(:nil) if sexp.empty?
 
