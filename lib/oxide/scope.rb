@@ -70,7 +70,7 @@ module Oxide
       end
 
       def to_vars
-        vars = @locals.map { |l| "#{l} = nil" }
+        vars = @locals.map { |l| "#{l[0]} #{l[1]}" }
         vars.push *@temps
         current_self = @parser.current_self
 
@@ -79,7 +79,7 @@ module Oxide
         end
 
         indent = @parser.parser_indent
-        res = vars.empty? ? '' : "var #{vars.join ', '};"
+        res = vars.empty? ? '' : "#{vars.join ', '};"
         str = ivars.empty? ? res : "#{res}\n#{indent}#{iv.join indent}"
 
         if class? and !@proto_ivars.empty?
@@ -101,6 +101,19 @@ module Oxide
 
       def queue_temp(name)
         @queue << name
+      end
+
+      def add_local(local)
+        return if has_local? local
+
+        @locals << local
+      end
+
+      def has_local?(local)
+        return true if @locals.include? local or @args.include? local
+        return @parent.has_local?(local) if @parent and @type == :iter
+
+        false
       end
     end
   end
