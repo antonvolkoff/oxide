@@ -197,7 +197,7 @@ module Oxide
 
     # s(:c_return, sexp)
     def process_c_return(sexp, level)
-      "return #{process sexp.shift, :expr};"
+      "#{process sexp.shift, :expr}\nreturn 0;"
     end
 
     # s(:lit, 1)
