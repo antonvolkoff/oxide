@@ -115,6 +115,23 @@ module Oxide
 
         false
       end
+
+      def uses_block?
+        @uses_block
+      end
+
+      def identify!
+        return @identity if @identity
+
+        @identity = @parser.unique_temp
+        @parent.add_temp @identity if @parent
+
+        @identity
+      end
+
+      def identity
+        @identity
+      end
     end
   end
 end

@@ -197,6 +197,72 @@ module Oxide
       end
     end
 
+    def new_body(compstmt, res, els, ens)
+      s = compstmt || s(:block)
+      s.line = compstmt.line if compstmt
+
+      if res
+        s = s(:rescue, s)
+        res.each { |r| s << r }
+        s << els if els
+      end
+
+      ens ? s(:ensure, s, ens) : s
+    end
+
+    def new_defn(line, name, args, body)
+      body = s(:block, body) if body[0] != :block
+      scope = s(:scope, body)
+      body << s(:nil) if body.size == 1
+      scope.line = body.line
+      args.line = line
+      s = s(:defn, name.to_sym, args, scope)
+      s.line = line
+      s.end_line = @line
+      s
+    end
+
+    def new_defs(line, recv, name, args, body)
+      scope = s(:scope, body)
+      scope.line = body.line
+      s = s(:defs, recv, name.to_sym, args, scope)
+      s.line = line
+      s.end_line = @line
+      s
+    end
+
+    def new_args(norm, opt, rest, block)
+      res = s(:args)
+
+      if norm
+        norm.each do |arg|
+          @scope.add_local arg
+          res << arg
+        end
+      end
+
+      if opt
+        opt[1..-1].each do |_opt|
+          res << _opt[1]
+        end
+      end
+
+      if rest
+        res << rest
+        rest_str = rest.to_s[1..-1]
+        @scope.add_local rest_str.to_sym unless rest_str.empty?
+      end
+
+      if block
+        res << block
+        @scope.add_local block.to_s[1..-1].to_sym
+      end
+
+      res << opt if opt
+
+      res
+    end
+
     def str_append(str, str2)
       return str2 unless str
       return str unless str2
