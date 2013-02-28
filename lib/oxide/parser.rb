@@ -169,6 +169,18 @@ module Oxide
       end
     end
 
+    # Returns type of the variable
+    # TODO: add more types along the way
+    def get_type(sexp)
+      val = sexp[1]
+      case val
+      when Numeric
+        :int
+      else
+        :void
+      end
+    end
+
     #################
     ## Processors
     #################
@@ -354,6 +366,17 @@ module Oxide
     # s(:self)  # => this
     def process_self(sexp, level)
       current_self
+    end
+
+    # s(:lasgn, :lvar, rhs)
+    def process_lasgn(sexp, level)
+      lvar = sexp[0]
+      rhs  = sexp[1]
+      lvar = "#{lvar}$".to_sym if RESERVED.include? lvar.to_s
+      ltype = get_type(rhs)
+      @scope.add_local [ltype, lvar]
+      res = "#{lvar} = #{process rhs, :expr};"
+      level == :recv ? "(#{res})" : res
     end
   end
 end

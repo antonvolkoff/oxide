@@ -102,6 +102,19 @@ module Oxide
       def queue_temp(name)
         @queue << name
       end
+
+      def add_local(local)
+        return if has_local? local
+
+        @locals << local
+      end
+
+      def has_local?(local)
+        return true if @locals.include? local or @args.include? local
+        return @parent.has_local?(local) if @parent and @type == :iter
+
+        false
+      end
     end
   end
 end
