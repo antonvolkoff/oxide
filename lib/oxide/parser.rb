@@ -172,8 +172,10 @@ module Oxide
     def get_type(sexp)
       val = sexp[1]
       case val
-      when Numeric
+      when Integer
         :int
+      when Float
+        :float
       else
         :void
       end
