@@ -61,11 +61,9 @@ module Oxide
       in_scope(:top) do
         indent {
           code = @indent + process(s(:scope, sexp), :stmt)
-          # code = process(s(:scope, sexp), :stmt)
         }
 
         code = INDENT + @scope.to_vars + "\n" + code
-        # code = @scope.to_vars + "\n" + code
       end
 
       "int main(int argc, char **argv) { #{code}\n }"

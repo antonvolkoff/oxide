@@ -70,7 +70,7 @@ module Oxide
       end
 
       def to_vars
-        vars = @locals.map { |l| "#{l} = nil" }
+        vars = @locals.map { |l| "#{l[0]} #{l[1]}" }
         vars.push *@temps
         current_self = @parser.current_self
 
@@ -79,7 +79,7 @@ module Oxide
         end
 
         indent = @parser.parser_indent
-        res = vars.empty? ? '' : "var #{vars.join ', '};"
+        res = vars.empty? ? '' : "#{vars.join ', '};"
         str = ivars.empty? ? res : "#{res}\n#{indent}#{iv.join indent}"
 
         if class? and !@proto_ivars.empty?
