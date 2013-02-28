@@ -44,6 +44,14 @@ module Oxide
       sexp
     end
 
+    def mid_to_jsid(mid)
+      if /\=|\+|\-|\*|\/|\!|\?|\<|\>|\&|\||\^|\%|\~|\[/ =~ mid.to_s
+        "['$#{mid}']"
+      else
+        '.$' + mid
+      end
+    end
+
     # Generates code for top level sexp
     #
     def top(sexp)
@@ -199,6 +207,153 @@ module Oxide
       else
         raise "Bad lit: #{val.inspect}"
       end
+    end
+
+    # s(:call, recv, :mid, s(:arglist))
+    # s(:call, nil, :mid, s(:arglist))
+    def process_call(sexp, level)
+      recv, meth, arglist, iter = sexp
+      mid = mid_to_jsid meth.to_s
+
+      case meth
+      when :attr_reader, :attr_writer, :attr_accessor
+        return handle_attr_optimize(meth, arglist[1..-1]) if @scope.class_scope?
+      when :block_given?
+        return js_block_given(sexp, level)
+      when :alias_native
+        return handle_alias_native(sexp) if @scope.class_scope?
+      when :require
+        path = arglist[1]
+
+        if path and path[0] == :str
+          @requires << path[1]
+        end
+
+        return ""
+      when :respond_to?
+        return handle_respond_to(sexp, level)
+      end
+
+      splat = arglist[1..-1].any? { |a| a.first == :splat }
+
+      if Array === arglist.last and arglist.last.first == :block_pass
+        arglist << s(:js_tmp, process(arglist.pop, :expr))
+      elsif iter
+        block   = iter
+      end
+
+      recv ||= s(:self)
+
+      if block
+        tmprecv = @scope.new_temp
+      elsif splat and recv != [:self] and recv[0] != :lvar
+        tmprecv = @scope.new_temp
+      else # method_missing
+       tmprecv = @scope.new_temp
+      end
+
+      args      = ""
+
+      recv_code = process recv, :recv
+
+      if @method_missing
+        call_recv = s(:js_tmp, tmprecv || recv_code)
+        arglist.insert 1, call_recv unless splat
+        args = process arglist, :expr
+
+        dispatch = if tmprecv
+          "((#{tmprecv} = #{recv_code})#{mid} || $mm('#{ meth.to_s }'))"
+        else
+          "(#{recv_code}#{mid} || $mm('#{ meth.to_s }'))"
+        end
+
+        result = if splat
+          "#{dispatch}.apply(#{process call_recv, :expr}, #{args})"
+        else
+          "#{dispatch}.call(#{args})"
+        end
+      else
+        args = process arglist, :expr
+        dispatch = tmprecv ? "(#{tmprecv} = #{recv_code})#{mid}" : "#{recv_code}#{mid}"
+        result = splat ? "#{dispatch}.apply(#{tmprecv || recv_code}, #{args})" : "#{dispatch}(#{args})"
+      end
+
+      @scope.queue_temp tmprecv if tmprecv
+      result
+    end
+
+    # s(:array [, sexp [, sexp]])
+    def process_array(sexp, level)
+      return '[]' if sexp.empty?
+
+      code = ''
+      work = []
+
+      until sexp.empty?
+        splat = sexp.first.first == :splat
+        part  = process sexp.shift, :expr
+
+        if splat
+          if work.empty?
+            code += (code.empty? ? part : ".concat(#{part})")
+          else
+            join  = "[#{work.join ', '}]"
+            code += (code.empty? ? join : ".concat(#{join})")
+            code += ".concat(#{part})"
+          end
+          work = []
+        else
+          work << part
+        end
+      end
+
+      unless work.empty?
+        join  = "[#{work.join ', '}]"
+        code += (code.empty? ? join : ".concat(#{join})")
+      end
+
+      code
+    end
+
+    # s(:arglist, [arg [, arg ..]])
+    def process_arglist(sexp, level)
+      code = ''
+      work = []
+
+      until sexp.empty?
+        splat = sexp.first.first == :splat
+        arg   = process sexp.shift, :expr
+
+        if splat
+          if work.empty?
+            if code.empty?
+              code += "[].concat(#{arg})"
+            else
+              code += ".concat(#{arg})"
+            end
+          else
+            join  = "[#{work.join ', '}]"
+            code += (code.empty? ? join : ".concat(#{join})")
+            code += ".concat(#{arg})"
+          end
+
+          work = []
+        else
+          work.push arg
+        end
+      end
+
+      unless work.empty?
+        join  = work.join ', '
+        code += (code.empty? ? join : ".concat([#{join}])")
+      end
+
+      code
+    end
+
+    # s(:self)  # => this
+    def process_self(sexp, level)
+      current_self
     end
   end
 end

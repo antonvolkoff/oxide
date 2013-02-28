@@ -89,6 +89,19 @@ module Oxide
           str
         end
       end
+
+      def new_temp
+        return @queue.pop unless @queue.empty?
+
+        tmp = "_#{@unique}"
+        @unique = @unique.succ
+        @temps << tmp
+        tmp
+      end
+
+      def queue_temp(name)
+        @queue << name
+      end
     end
   end
 end

@@ -84,6 +84,24 @@ module Oxide
       s
     end
 
+    def add_block_pass(arglist, block)
+      arglist << block if block
+      arglist
+    end
+
+    def new_regexp(reg, ending)
+      return s(:lit, //) unless reg
+      case reg[0]
+      when :str
+        s(:lit, Regexp.new(reg[1], ending))
+      when :evstr
+        res = s(:dregx, "", reg)
+      when :dstr
+        reg[0] = :dregx
+        reg
+      end
+    end
+
     def new_call(recv, meth, args = nil)
       call = s(:call, recv, meth)
       args = s(:arglist) unless args
