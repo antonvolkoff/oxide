@@ -1,0 +1,5 @@
+(A) Support method definition +v.0.1.0
+(A) Propelly handling a method calling +v.0.1.0
+(B) Auto detect return type and value +v.0.1.0
+Support class definition +v.0.1.0
+Support methods definition +v.0.1.0
