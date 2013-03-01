@@ -60,10 +60,7 @@ module Oxide
       vars = []
 
       in_scope(:top) do
-        indent {
-          code = process(s(:scope, sexp), :stmt)
-        }
-
+        code = process(s(:scope, sexp), :stmt)
         code = INDENT + @scope.to_vars + "\n" + code
       end
 
@@ -435,7 +432,7 @@ module Oxide
       lvar = "#{lvar}$".to_sym if RESERVED.include? lvar.to_s
       ltype = get_type(rhs)
       @scope.add_local [ltype, lvar]
-      res = "#{lvar} = #{process rhs, :expr}"
+      res = "#{lvar} = #{process rhs, :expr};"
       level == :recv ? "(#{res})" : res
     end
 
@@ -468,7 +465,10 @@ module Oxide
 
       code += "#{return_type} #{mid}()\n{"
       indent do
-
+        in_scope(:def) do
+          stmt_code = "\n#@indent" + process(stmts, :stmt)
+          code += stmt_code
+        end
       end
       code += "\n}"
 
