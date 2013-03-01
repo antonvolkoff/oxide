@@ -130,7 +130,6 @@ module Oxide
 
           # find out which elements needs to be deleted
           sexp.each_with_index do |s, i|
-            # puts "#{i}: #{s.inspect} #{s.class}"
             if s.kind_of? Array and [:lasgn, :return].include? s.first
               delete_indexes << i
             end
@@ -487,8 +486,8 @@ module Oxide
       code += "#{return_type} #{mid}()\n{"
       indent do
         in_scope(:def) do
-          stmt_code = "\n#@indent" + process(stmts, :stmt)
-          code += stmt_code
+          stmt_code = "\n#{@indent}" + process(stmts, :stmt)
+          code += "\n#{@indent}#{@scope.to_vars}" + stmt_code
         end
       end
       code += "\n}"
