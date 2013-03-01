@@ -116,6 +116,7 @@ module Oxide
     end
 
     def main_method(sexp)
+      puts "main_method(#{sexp.inspect})"
       return main_method(s(:nil)) unless sexp
 
       case sexp.first
@@ -124,7 +125,27 @@ module Oxide
         sexp
       when :block
         if sexp.length > 1
-          sexp[-1] = main_method(sexp[-1])
+          delete_indexes = []
+          main_stmt = []
+
+          # find out which elements needs to be deleted
+          sexp.each_with_index do |s, i|
+            # puts "#{i}: #{s.inspect} #{s.class}"
+            if s.kind_of? Array and [:lasgn, :return].include? s.first
+              delete_indexes << i
+            end
+          end
+
+          # prepend elements main_stmt and delete those elements
+          # in reverse order from sexp
+          delete_indexes.reverse_each do |i|
+            main_stmt.unshift(sexp[i])
+            sexp.delete_at(i)
+          end
+
+          # place elements back into sexp inside :defn
+          main_stmt.unshift(:block)
+          sexp << s(:defn, :main, s(:args), s(:scope, main_stmt))
         else
           sexp << main_method(s(:nil))
         end
@@ -675,6 +696,14 @@ module Oxide
       define_method "process_#{name}" do |exp, level|
         name
       end
+    end
+
+    # s(:return [val])
+    def process_return(sexp, level)
+      val = process(sexp.shift || s(:nil), :expr)
+
+      raise "Cannot return as an expression" unless level == :stmt
+      "return #{val};"
     end
   end
 end
