@@ -2,19 +2,23 @@ require 'oxide'
 
 module Kernel
   def oxide_parse(str)
-    Oxide::Grammar.new.parse str, '(string)'
+    oxide_sexp(str)
   end
 
   def oxide_sexp(str)
     Oxide::Grammar.new.parse str, '(string)'
   end
 
-  def oxide_code(str)
-    code = Oxide::Parser.new.parse str
+  def load_fixture(name, ext)
+    File.open("#{File.dirname(__FILE__)}/fixtures/#{name}#{ext}", 'r').read
   end
 
-  def in_main(str)
-    "int main(int argc, char **argv) {   \n  #{str}\n }"
+  def cpp_fixture(name)
+    load_fixture(name, '.cpp')
+  end
+
+  def ruby_fixture(name)
+    load_fixture(name, '.rb')
   end
 end
 
@@ -27,4 +31,6 @@ RSpec.configure do |config|
 
   # Use the specified formatter
   config.formatter = :documentation # :progress, :html, :textmate
+
+  config.treat_symbols_as_metadata_keys_with_true_values = true
 end
