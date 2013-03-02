@@ -132,6 +132,10 @@ module Oxide
       def identity
         @identity
       end
+
+      def add_arg(arg)
+        @args << arg unless @args.include? arg
+      end
     end
   end
 end
