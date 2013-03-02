@@ -30,7 +30,7 @@ module Oxide
       @line = 1
       @indent   = ''
       @unique   = 0
-      @debug = true
+      @debug = false
 
       top @grammer.parse(source, '(file)')
     end
@@ -61,10 +61,10 @@ module Oxide
 
       in_scope(:top) do
         code = process(s(:scope, sexp), :stmt)
-        code = INDENT + @scope.to_vars + "\n" + code
+        code = @scope.to_vars + "\n" + code
       end
 
-      "#{code}"
+      "#include <iostream>\n#{code}"
     end
 
     def in_scope(type)
@@ -124,7 +124,26 @@ module Oxide
         sexp
       when :block
         if sexp.length > 1
-          sexp[-1] = main_method(sexp[-1])
+          delete_indexes = []
+          main_stmt = []
+
+          # find out which elements needs to be deleted
+          sexp.each_with_index do |s, i|
+            if s.kind_of? Array and [:lasgn, :return].include? s.first
+              delete_indexes << i
+            end
+          end
+
+          # prepend elements main_stmt and delete those elements
+          # in reverse order from sexp
+          delete_indexes.reverse_each do |i|
+            main_stmt.unshift(sexp[i])
+            sexp.delete_at(i)
+          end
+
+          # place elements back into sexp inside :defn
+          main_stmt.unshift(:block)
+          sexp << s(:defn, :main, s(:args), s(:scope, main_stmt))
         else
           sexp << main_method(s(:nil))
         end
@@ -456,21 +475,23 @@ module Oxide
     def cpp_def(recvr, mid, args, stmts, line, end_line)
       code = ''
       return_type = ''
+      args = ''
 
-      if mid == "main"
+      if mid == :main
         return_type = 'int'
+        args = 'int argc, char **argv'
       else
-        return_type = 'void'
+        return_type = 'void*'
       end
 
-      code += "#{return_type} #{mid}()\n{"
+      code += "#{return_type} #{mid}(#{args})\n{"
       indent do
         in_scope(:def) do
-          stmt_code = "\n#@indent" + process(stmts, :stmt)
-          code += stmt_code
+          stmt_code = "\n#{@indent}" + process(stmts, :stmt)
+          code += "\n#{@indent}#{@scope.to_vars}" + stmt_code
         end
       end
-      code += "\n}"
+      code += "\n}\n"
 
       # if recvr
       #   @scope.defines_defs = true
@@ -671,10 +692,22 @@ module Oxide
       end
     end
 
-    %w(true false nil).each do |name|
-      define_method "process_#{name}" do |exp, level|
+    def process_nil(sexp, level)
+      'NULL'
+    end
+
+    %w(true false).each do |name|
+      define_method "process_#{name}" do |sexp, level|
         name
       end
+    end
+
+    # s(:return [val])
+    def process_return(sexp, level)
+      val = process(sexp.shift || s(:nil), :expr)
+
+      raise "Cannot return as an expression" unless level == :stmt
+      "return #{val};"
     end
   end
 end

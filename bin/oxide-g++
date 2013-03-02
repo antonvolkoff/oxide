@@ -24,10 +24,10 @@ dirname = File.dirname(ARGV[0]) + "/" if File.dirname(ARGV[0])
 basename = File.basename(ARGV[0], '.rb')
 source = File.open(ARGV[0], "r").read
 
-c_filename = "#{dirname}#{basename}.c"
+c_filename = "#{dirname}#{basename}.cpp"
 File.open(c_filename, 'w') do |f|
   f.write(Oxide.parse(source))
 end
 
 # Compile the parsed file with gcc
-print `gcc #{c_filename} -o #{dirname + basename}`
+print `g++ #{c_filename} -o #{dirname + basename}`
