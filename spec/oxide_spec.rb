@@ -12,4 +12,8 @@ describe Oxide do
   it 'should parse example #2: method calling' do
     should_parse_example('example_2')
   end
+
+  it 'should parse example #3: method definition with args', :wip do
+    should_parse_example('example_3')
+  end
 end

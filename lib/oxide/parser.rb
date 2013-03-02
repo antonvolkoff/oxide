@@ -478,16 +478,16 @@ module Oxide
     def cpp_def(recvr, mid, args, stmts, line, end_line)
       code = ''
       return_type = ''
-      args = ''
 
       if mid == :main
         return_type = 'int'
-        args = 'int argc, char **argv'
+        params = 'int argc, char **argv'
       else
         return_type = 'void*'
+        params = process(args, :expr)
       end
 
-      code += "#{return_type} #{mid}(#{args})\n{"
+      code += "#{return_type} #{mid}(#{params})\n{"
       indent do
         in_scope(:def) do
           stmt_code = "\n#{@indent}" + process(stmts, :stmt)
@@ -496,145 +496,6 @@ module Oxide
         end
       end
       code += "\n}\n"
-
-      # if recvr
-      #   @scope.defines_defs = true
-      #   smethod = true if @scope.class_scope? && recvr.first == :self
-      #   recv = process(recvr, :expr)
-      # else
-      #   @scope.defines_defn = true
-      #   recv = current_self
-      # end
-
-      # code = ''
-      # params = nil
-      # scope_name = nil
-      # uses_super = nil
-      # uses_splat = nil
-
-      # # opt args if last arg is sexp
-      # opt = args.pop if Array === args.last
-
-      # argc = args.length - 1
-
-      # # block name &block
-      # if args.last.to_s.start_with? '&'
-      #   block_name = args.pop.to_s[1..-1].to_sym
-      #   argc -= 1
-      # end
-
-      # # splat args *splat
-      # if args.last.to_s.start_with? '*'
-      #   uses_splat = true
-      #   if args.last == :*
-      #     #args[-1] = splat
-      #     argc -= 1
-      #   else
-      #     splat = args[-1].to_s[1..-1].to_sym
-      #     args[-1] = splat
-      #     argc -= 1
-      #   end
-      # end
-
-      # args << block_name if block_name # have to re-add incase there was a splat arg
-
-      # if @arity_check
-      #   arity_code = arity_check(args, opt, uses_splat, block_name, mid) + "\n#{INDENT}"
-      # end
-
-      # indent do
-      #   in_scope(:def) do
-      #     @scope.mid  = mid
-      #     @scope.defs = true if recvr
-
-      #     if block_name
-      #       @scope.uses_block!
-      #     end
-
-      #     yielder = block_name || '__yield'
-      #     @scope.block_name = yielder
-
-      #     params = process args, :expr
-      #     stmt_code = "\n#@indent" + process(stmts, :stmt)
-
-      #     if @scope.uses_block?
-      #       # CASE 1: no args - only the block
-      #       if argc == 0 and !splat
-      #         # add param name as a function param, to make it cleaner
-      #         # params = yielder
-      #         code += "if (typeof(#{yielder}) !== 'function') { #{yielder} = nil }"
-      #       # CASE 2: we have a splat - use argc to get splat args, then check last one
-      #       elsif splat
-      #         @scope.add_temp yielder
-      #         code += "#{splat} = __slice.call(arguments, #{argc});\n#{@indent}"
-      #         code += "if (typeof(#{splat}[#{splat}.length - 1]) === 'function') { #{yielder} = #{splat}.pop(); } else { #{yielder} = nil; }\n#{@indent}"
-      #       # CASE 3: we have some opt args
-      #       elsif opt
-      #         code += "var BLOCK_IDX = arguments.length - 1;\n#{@indent}"
-      #         code += "if (typeof(arguments[BLOCK_IDX]) === 'function' && arguments[BLOCK_IDX]._s !== undefined) { #{yielder} = arguments[BLOCK_IDX] } else { #{yielder} = nil }"
-      #         lastopt = opt[-1][1]
-      #         opt[1..-1].each do |o|
-      #           id = process s(:lvar, o[1]), :expr
-      #           if o[2][2] == :undefined
-      #             code += ("if (%s === %s && typeof(%s) === 'function') { %s = undefined; }" % [id, yielder, id, id])
-      #           else
-      #             code += ("if (%s == null || %s === %s) {\n%s%s\n%s}" %
-      #                     [id, id, yielder, @indent + INDENT, process(o, :expre), @indent])
-      #           end
-      #         end
-
-      #       # CASE 4: normal args and block
-      #       else
-      #         code += "if (typeof(#{yielder}) !== 'function') { #{yielder} = nil }"
-      #       end
-      #     else
-      #       opt[1..-1].each do |o|
-      #         next if o[2][2] == :undefined
-      #         id = process s(:lvar, o[1]), :expr
-      #         code += ("if (%s == null) {\n%s%s\n%s}" %
-      #                   [id, @indent + INDENT, process(o, :expre), @indent])
-      #       end if opt
-
-      #       code += "#{splat} = __slice.call(arguments, #{argc});" if splat
-      #     end
-
-      #     code += stmt_code
-
-      #     if @scope.uses_block? and !block_name
-      #       params = params.empty? ? yielder : "#{params}, #{yielder}"
-      #     end
-
-      #     # Returns the identity name if identified, nil otherwise
-      #     scope_name = @scope.identity
-
-      #     uses_super = @scope.uses_super
-
-      #     code = "#{arity_code}#@indent#{@scope.to_vars}" + code
-      #   end
-      # end
-
-      # defcode = "#{"#{scope_name} = " if scope_name}function(#{params}) {\n#{code}\n#@indent}"
-
-      # if recvr
-      #   if smethod
-      #     "#{ @scope.name }._defs('$#{mid}', #{defcode})"
-      #   else
-      #     "#{ recv }#{ jsid } = #{ defcode }"
-      #   end
-      # elsif @scope.class_scope?
-      #   @scope.methods << "$#{mid}"
-      #   if uses_super
-      #     @scope.add_temp uses_super
-      #     uses_super = "#{uses_super} = #{@scope.proto}#{jsid};\n#@indent"
-      #   end
-      #   "#{uses_super}#{ @scope.proto }#{jsid} = #{defcode}"
-      # elsif @scope.type == :iter
-      #   "def#{jsid} = #{defcode}"
-      # elsif @scope.type == :top
-      #   "#{ current_self }#{ jsid } = #{ defcode }"
-      # else
-      #   "def#{jsid} = #{defcode}"
-      # end
     end
 
     def process_args(exp, level)
@@ -645,7 +506,7 @@ module Oxide
         next if a.to_s == '*'
         a = "#{a}$".to_sym if RESERVED.include? a.to_s
         @scope.add_arg a
-        args << a
+        args << "void* #{a}"
       end
 
       args.join ', '
@@ -712,6 +573,13 @@ module Oxide
 
       raise "Cannot return as an expression" unless level == :stmt
       "return #{val};"
+    end
+
+    # s(:lvar, :lvar)
+    def process_lvar(exp, level)
+      lvar = exp.shift.to_s
+      lvar = "#{lvar}$" if RESERVED.include? lvar
+      lvar
     end
   end
 end
