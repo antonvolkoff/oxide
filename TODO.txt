@@ -1,6 +1,6 @@
 X Support method definition +v.0.1.0
 X Propelly handling a method calling +v.0.1.0
-(A) Allow to use arguments in method definitions + v.0.1.0
+X Allow to use arguments in method definitions + v.0.1.0
 (A) Call methods with arguments passing + v.0.1.0
 (B) Auto detect return type and value +v.0.1.0
 Support class definition +v.0.1.0
