@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe 'Methods definition', :wip do
+describe 'Methods definition' do
   describe "for normal definitions" do
     it "should return s(:defn)" do
       oxide_parse("def a; end").should == [:defn, :a, [:args], [:scope, [:block, [:nil]]]]

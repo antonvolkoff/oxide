@@ -129,7 +129,7 @@ module Oxide
 
           # find out which elements needs to be deleted
           sexp.each_with_index do |s, i|
-            if s.kind_of? Array and [:lasgn, :return].include? s.first
+            if s.kind_of? Array and [:lasgn, :return, :call].include? s.first
               delete_indexes << i
             end
           end
@@ -301,73 +301,76 @@ module Oxide
     # s(:call, nil, :mid, s(:arglist))
     def process_call(sexp, level)
       recv, meth, arglist, iter = sexp
-      mid = mid_to_jsid meth.to_s
+      mid = meth.to_s
 
-      case meth
-      when :attr_reader, :attr_writer, :attr_accessor
-        return handle_attr_optimize(meth, arglist[1..-1]) if @scope.class_scope?
-      when :block_given?
-        return js_block_given(sexp, level)
-      when :alias_native
-        return handle_alias_native(sexp) if @scope.class_scope?
-      when :require
-        path = arglist[1]
+      result = "#{mid}();"
 
-        if path and path[0] == :str
-          @requires << path[1]
-        end
+      # case meth
+      # when :attr_reader, :attr_writer, :attr_accessor
+      #   return handle_attr_optimize(meth, arglist[1..-1]) if @scope.class_scope?
+      # when :block_given?
+      #   return js_block_given(sexp, level)
+      # when :alias_native
+      #   return handle_alias_native(sexp) if @scope.class_scope?
+      # when :require
+      #   path = arglist[1]
 
-        return ""
-      when :respond_to?
-        return handle_respond_to(sexp, level)
-      end
+      #   if path and path[0] == :str
+      #     @requires << path[1]
+      #   end
 
-      splat = arglist[1..-1].any? { |a| a.first == :splat }
+      #   return ""
+      # when :respond_to?
+      #   return handle_respond_to(sexp, level)
+      # end
 
-      if Array === arglist.last and arglist.last.first == :block_pass
-        arglist << s(:js_tmp, process(arglist.pop, :expr))
-      elsif iter
-        block   = iter
-      end
+      # splat = arglist[1..-1].any? { |a| a.first == :splat }
 
-      recv ||= s(:self)
+      # if Array === arglist.last and arglist.last.first == :block_pass
+      #   arglist << s(:js_tmp, process(arglist.pop, :expr))
+      # elsif iter
+      #   block   = iter
+      # end
 
-      if block
-        tmprecv = @scope.new_temp
-      elsif splat and recv != [:self] and recv[0] != :lvar
-        tmprecv = @scope.new_temp
-      else # method_missing
-       tmprecv = @scope.new_temp
-      end
+      # recv ||= s(:self)
 
-      args      = ""
+      # no need to create temp recv variable
+      # if block
+      #   tmprecv = @scope.new_temp
+      # elsif splat and recv != [:self] and recv[0] != :lvar
+      #   tmprecv = @scope.new_temp
+      # else # method_missing
+      #  tmprecv = @scope.new_temp
+      # end
 
-      recv_code = process recv, :recv
+      # args      = ""
 
-      if @method_missing
-        call_recv = s(:js_tmp, tmprecv || recv_code)
-        arglist.insert 1, call_recv unless splat
-        args = process arglist, :expr
+      # recv_code = process recv, :recv
 
-        dispatch = if tmprecv
-          "((#{tmprecv} = #{recv_code})#{mid} || $mm('#{ meth.to_s }'))"
-        else
-          "(#{recv_code}#{mid} || $mm('#{ meth.to_s }'))"
-        end
+      # if @method_missing
+      #   call_recv = s(:js_tmp, tmprecv || recv_code)
+      #   arglist.insert 1, call_recv unless splat
+      #   args = process arglist, :expr
 
-        result = if splat
-          "#{dispatch}.apply(#{process call_recv, :expr}, #{args})"
-        else
-          "#{dispatch}.call(#{args})"
-        end
-      else
-        args = process arglist, :expr
-        dispatch = tmprecv ? "(#{tmprecv} = #{recv_code})#{mid}" : "#{recv_code}#{mid}"
-        result = splat ? "#{dispatch}.apply(#{tmprecv || recv_code}, #{args})" : "#{dispatch}(#{args})"
-      end
+      #   dispatch = if tmprecv
+      #     "((#{tmprecv} = #{recv_code})#{mid} || $mm('#{ meth.to_s }'))"
+      #   else
+      #     "(#{recv_code}#{mid} || $mm('#{ meth.to_s }'))"
+      #   end
 
-      @scope.queue_temp tmprecv if tmprecv
-      result
+      #   result = if splat
+      #     "#{dispatch}.apply(#{process call_recv, :expr}, #{args})"
+      #   else
+      #     "#{dispatch}.call(#{args})"
+      #   end
+      # else
+      # args = process arglist, :expr
+      # result = "#{mid}();"
+        # result = splat ? "#{dispatch}.apply(#{tmprecv || recv_code}, #{args})" : "#{dispatch}(#{args})"
+      # end
+
+      # @scope.queue_temp tmprecv if tmprecv
+      # result
     end
 
     # s(:array [, sexp [, sexp]])
@@ -488,7 +491,8 @@ module Oxide
       indent do
         in_scope(:def) do
           stmt_code = "\n#{@indent}" + process(stmts, :stmt)
-          code += "\n#{@indent}#{@scope.to_vars}" + stmt_code
+          code += "\n#{@indent}#{@scope.to_vars}" unless @scope.to_vars.empty?
+          code += stmt_code
         end
       end
       code += "\n}\n"
