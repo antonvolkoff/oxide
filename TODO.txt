@@ -1,7 +1,15 @@
-X Support method definition +v.0.1.0
-X Propelly handling a method calling +v.0.1.0
-X Allow to use arguments in method definitions + v.0.1.0
-(A) Call methods with arguments passing + v.0.1.0
-(B) Auto detect return type and value +v.0.1.0
-Support class definition +v.0.1.0
-Support modules definition +v.0.1.0
+X Support method definition +v.0.0.5
+X Propelly handling a method calling +v.0.0.5
+X Allow to use arguments in method definitions + v.0.0.5
+(A) Call methods with arguments passing + v.0.0.5
+(B) Auto detect return type and value +v.0.0.5
+if expression parsing +v.0.0.5
+unless expression parsing +v.0.0.5
+if-elsif-else expression parsing +v.0.0.5
+short-if expression parsing +v.0.0.5
+case expression parsing +v.0.0.5
+while loop parsing +v.0.0.5
+until loop parsing +v.0.0.5
+for loop parsing +v.0.0.5
+Support class definition +v.0.0.5
+Support modules definition +v.0.0.5
